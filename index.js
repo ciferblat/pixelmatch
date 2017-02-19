@@ -4,16 +4,18 @@ module.exports = pixelmatch;
 
 function pixelmatch(img1, img2, output, width, height, options) {
 
-    if (img1.length !== img2.length) throw new Error('Image sizes do not match.');
-
     if (!options) options = {};
 
     var threshold = options.threshold === undefined ? 0.1 : options.threshold;
+    var ignoreTransparent = options.ignoreTransparent === undefined ? false : !!options.ignoreTransparent;
 
     // maximum acceptable square distance between two colors;
     // 35215 is the maximum possible value for the YIQ difference metric
     var maxDelta = 35215 * threshold * threshold,
-        diff = 0;
+        result = {
+            diff: 0,
+            pixels: 0
+        };
 
     // compare each pixel of one image against the other one
     for (var y = 0; y < height; y++) {
@@ -22,7 +24,9 @@ function pixelmatch(img1, img2, output, width, height, options) {
             var pos = (y * width + x) * 4;
 
             // squared YUV distance between colors at this pixel position
+            if (ignoreTransparent && isTransparent(img1, img2, pos, pos)) continue;
             var delta = colorDelta(img1, img2, pos, pos);
+            result.pixels++;
 
             // the color difference is above the threshold
             if (delta > maxDelta) {
@@ -35,7 +39,7 @@ function pixelmatch(img1, img2, output, width, height, options) {
                 } else {
                     // found substantial difference not caused by anti-aliasing; draw it as red
                     if (output) drawPixel(output, pos, 255, 0, 0);
-                    diff++;
+                    result.diff++;
                 }
 
             } else if (output) {
@@ -47,7 +51,7 @@ function pixelmatch(img1, img2, output, width, height, options) {
     }
 
     // return the number of different pixels
-    return diff;
+    return result;
 }
 
 // check if a pixel is likely a part of anti-aliasing;
@@ -113,11 +117,15 @@ function antialiased(img, x1, y1, width, height, img2) {
 // calculate color difference according to the paper "Measuring perceived color difference
 // using YIQ NTSC transmission color space in mobile applications" by Y. Kotsarenko and F. Ramos
 
-function colorDelta(img1, img2, k, m, yOnly) {
-    var a1 = img1[k + 3] / 255,
-        a2 = img2[m + 3] / 255,
+function isTransparent(img1, img2, k, m) {
+    return img1[k + 3] === 0 || img2[m + 3];
+}
 
-        r1 = blend(img1[k + 0], a1),
+function colorDelta(img1, img2, k, m, yOnly, ignoreTransparent) {
+    var a1 = img1[k + 3] / 255,
+        a2 = img2[m + 3] / 255;
+
+    var r1 = blend(img1[k + 0], a1),
         g1 = blend(img1[k + 1], a1),
         b1 = blend(img1[k + 2], a1),
 
