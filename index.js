@@ -118,7 +118,7 @@ function antialiased(img, x1, y1, width, height, img2) {
 // using YIQ NTSC transmission color space in mobile applications" by Y. Kotsarenko and F. Ramos
 
 function isTransparent(img1, img2, k, m) {
-    return img1[k + 3] === 0 || img2[m + 3];
+    return img1[k + 3] === 0 || img2[m + 3] === 0;
 }
 
 function colorDelta(img1, img2, k, m, yOnly, ignoreTransparent) {
